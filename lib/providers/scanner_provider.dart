@@ -96,3 +96,4 @@ final scannerProvider =
     StateNotifierProvider<ScannerNotifier, ScannerState>((ref) {
   return ScannerNotifier();
 });
+

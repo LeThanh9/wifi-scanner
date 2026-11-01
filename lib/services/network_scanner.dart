@@ -156,3 +156,4 @@ class NetworkScanner {
     _isScanning = false;
   }
 }
+

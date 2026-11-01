@@ -28,3 +28,4 @@ flutter build apk --release
 - ACCESS_NETWORK_STATE - Kiểm tra kết nối mạng
 - ACCESS_FINE_LOCATION - Truy cập SSID WiFi
 - INTERNET - Quét mạng
+

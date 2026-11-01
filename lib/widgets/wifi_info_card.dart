@@ -188,3 +188,4 @@ class WifiInfoCard extends StatelessWidget {
     );
   }
 }
+

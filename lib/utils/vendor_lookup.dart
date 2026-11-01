@@ -144,3 +144,4 @@ class VendorLookup {
     return DeviceType.unknown;
   }
 }
+

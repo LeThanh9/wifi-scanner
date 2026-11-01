@@ -163,3 +163,4 @@ class DeviceCard extends StatelessWidget {
     );
   }
 }
+
