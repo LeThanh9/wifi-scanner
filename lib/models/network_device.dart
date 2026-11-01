@@ -6,6 +6,7 @@ class NetworkDevice {
   final DeviceType deviceType;
   final int pingTimeMs;
   final bool isGateway;
+  final bool isCurrentDevice;
 
   const NetworkDevice({
     required this.ipAddress,
@@ -15,6 +16,7 @@ class NetworkDevice {
     this.deviceType = DeviceType.unknown,
     this.pingTimeMs = -1,
     this.isGateway = false,
+    this.isCurrentDevice = false,
   });
 
   NetworkDevice copyWith({
@@ -25,6 +27,7 @@ class NetworkDevice {
     DeviceType? deviceType,
     int? pingTimeMs,
     bool? isGateway,
+    bool? isCurrentDevice,
   }) {
     return NetworkDevice(
       ipAddress: ipAddress ?? this.ipAddress,
@@ -34,6 +37,7 @@ class NetworkDevice {
       deviceType: deviceType ?? this.deviceType,
       pingTimeMs: pingTimeMs ?? this.pingTimeMs,
       isGateway: isGateway ?? this.isGateway,
+      isCurrentDevice: isCurrentDevice ?? this.isCurrentDevice,
     );
   }
 
@@ -49,7 +53,7 @@ class NetworkDevice {
 
   @override
   String toString() =>
-      'NetworkDevice(ip: $ipAddress, mac: $macAddress, host: $hostname, vendor: $vendor)';
+      'NetworkDevice(ip: $ipAddress, mac: $macAddress, host: $hostname, vendor: $vendor, gateway: $isGateway, current: $isCurrentDevice)';
 }
 
 enum DeviceType {
@@ -69,23 +73,23 @@ enum DeviceType {
       case DeviceType.router:
         return 'Router / Gateway';
       case DeviceType.phone:
-        return 'Phone';
+        return 'Phone / Mobile';
       case DeviceType.computer:
-        return 'Computer';
+        return 'Computer / PC';
       case DeviceType.tablet:
         return 'Tablet';
       case DeviceType.printer:
         return 'Printer';
       case DeviceType.tv:
-        return 'Smart TV';
+        return 'Smart TV / Media';
       case DeviceType.iot:
-        return 'IoT Device';
+        return 'IoT / Smart Device';
       case DeviceType.server:
-        return 'Server';
+        return 'Server / NAS';
       case DeviceType.camera:
-        return 'Camera';
+        return 'IP Camera';
       case DeviceType.unknown:
-        return 'Unknown Device';
+        return 'Network Device';
     }
   }
 }

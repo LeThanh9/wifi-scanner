@@ -6,11 +6,31 @@ class WifiInfoCard extends StatelessWidget {
 
   const WifiInfoCard({super.key, required this.wifiInfo});
 
+  List<Color> _getGradientColors() {
+    if (wifiInfo.band.contains('5')) {
+      return [Colors.blue.shade500, Colors.indigo.shade700];
+    }
+    if (wifiInfo.band.contains('6')) {
+      return [Colors.purple.shade500, Colors.deepPurple.shade700];
+    }
+    if (wifiInfo.band.contains('2.4')) {
+      return [Colors.teal.shade500, Colors.green.shade700];
+    }
+    return [Colors.blueGrey.shade600, Colors.blueGrey.shade800];
+  }
+
+  Color _getBadgeColor() {
+    if (wifiInfo.band.contains('5')) return Colors.blue.shade700;
+    if (wifiInfo.band.contains('6')) return Colors.purple.shade700;
+    if (wifiInfo.band.contains('2.4')) return Colors.teal.shade700;
+    return Colors.blueGrey.shade700;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final is5GHz = wifiInfo.band == '5 GHz';
+    final gradient = _getGradientColors();
 
     return Card(
       child: Padding(
@@ -25,9 +45,9 @@ class WifiInfoCard extends StatelessWidget {
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      colors: is5GHz
-                          ? [Colors.blue.shade400, Colors.blue.shade700]
-                          : [Colors.green.shade400, Colors.green.shade700],
+                      colors: gradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -39,7 +59,7 @@ class WifiInfoCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        wifiInfo.isConnected ? wifiInfo.ssid : 'Not Connected',
+                        wifiInfo.displayName,
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
@@ -47,35 +67,38 @@ class WifiInfoCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        wifiInfo.bssid,
+                        wifiInfo.bssid != 'Unknown' && wifiInfo.bssid.isNotEmpty
+                            ? 'BSSID: ${wifiInfo.bssid}'
+                            : (wifiInfo.isConnected ? 'Network Connected' : 'Not Connected'),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.outline,
                           fontFamily: 'monospace',
+                          fontSize: 11,
                         ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
                 // Band Badge
-                if (wifiInfo.band != 'Unknown')
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: is5GHz ? Colors.blue : Colors.green,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      wifiInfo.band,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 13,
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _getBadgeColor(),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    wifiInfo.bandDisplay,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
                     ),
                   ),
+                ),
               ],
             ),
-            
+
             const SizedBox(height: 16),
             const Divider(height: 1),
             const SizedBox(height: 12),
@@ -87,7 +110,7 @@ class WifiInfoCard extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     Icons.speed,
-                    'Frequency',
+                    'Tần số (Freq)',
                     wifiInfo.frequencyDisplay,
                   ),
                 ),
@@ -95,10 +118,8 @@ class WifiInfoCard extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     Icons.signal_cellular_alt,
-                    'Signal',
-                    wifiInfo.signalStrength != 0
-                        ? '${wifiInfo.signalStrength} dBm'
-                        : 'N/A',
+                    'Tín hiệu (Signal)',
+                    wifiInfo.signalStrength != 0 ? '${wifiInfo.signalStrength} dBm' : 'Tốt',
                   ),
                 ),
               ],
@@ -110,7 +131,7 @@ class WifiInfoCard extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     Icons.router,
-                    'Gateway',
+                    'Gateway / Router',
                     wifiInfo.gatewayIp,
                   ),
                 ),
@@ -118,7 +139,7 @@ class WifiInfoCard extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     Icons.phone_android,
-                    'Local IP',
+                    'IP máy này',
                     wifiInfo.localIp,
                   ),
                 ),
@@ -131,16 +152,16 @@ class WifiInfoCard extends StatelessWidget {
                   child: _buildInfoItem(
                     context,
                     Icons.grid_view,
-                    'Subnet',
+                    'Subnet Mask',
                     wifiInfo.subnetMask,
                   ),
                 ),
                 Expanded(
                   child: _buildInfoItem(
                     context,
-                    Icons.broadcast_on_personal,
-                    'Broadcast',
-                    wifiInfo.broadcastAddress,
+                    Icons.category,
+                    'Loại mạng',
+                    wifiInfo.networkType.toUpperCase(),
                   ),
                 ),
               ],
@@ -188,4 +209,3 @@ class WifiInfoCard extends StatelessWidget {
     );
   }
 }
-

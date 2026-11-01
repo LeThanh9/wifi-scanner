@@ -70,28 +70,35 @@ class DeviceDetailScreen extends StatelessWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
+            const SizedBox(height: 8),
             if (device.isGateway)
               Chip(
-                label: const Text('Gateway'),
+                label: const Text('Router / Gateway'),
                 avatar: const Icon(Icons.star, size: 18),
                 backgroundColor: colorScheme.primaryContainer,
+              )
+            else if (device.isCurrentDevice)
+              Chip(
+                label: const Text('Máy này (This Device)'),
+                avatar: const Icon(Icons.check_circle, size: 18, color: Colors.teal),
+                backgroundColor: Colors.teal.withOpacity(0.15),
               ),
             const SizedBox(height: 24),
 
             // Info Cards
-            _buildInfoCard(context, 'IP Address', device.ipAddress, Icons.language),
-            _buildInfoCard(context, 'MAC Address', device.macAddress, Icons.fingerprint),
-            _buildInfoCard(context, 'Hostname', device.hostname, Icons.dns),
-            _buildInfoCard(context, 'Vendor', device.vendor, Icons.business),
+            _buildInfoCard(context, 'Địa chỉ IP (IP Address)', device.ipAddress, Icons.language),
+            _buildInfoCard(context, 'Địa chỉ MAC (MAC Address)', device.macAddress, Icons.fingerprint),
+            _buildInfoCard(context, 'Tên thiết bị (Hostname)', device.hostname, Icons.dns),
+            _buildInfoCard(context, 'Nhà sản xuất (Vendor)', device.vendor, Icons.business),
             _buildInfoCard(
               context,
-              'Ping Time',
+              'Thời gian phản hồi (Ping)',
               device.pingTimeMs >= 0 ? '${device.pingTimeMs} ms' : 'N/A',
               Icons.speed,
             ),
             _buildInfoCard(
               context,
-              'Device Type',
+              'Loại thiết bị (Device Type)',
               device.deviceType.displayName,
               _getDeviceIcon(),
             ),
@@ -131,4 +138,3 @@ class DeviceDetailScreen extends StatelessWidget {
     );
   }
 }
-

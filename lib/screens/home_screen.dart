@@ -8,7 +8,7 @@ import 'device_detail_screen.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   final VoidCallback onToggleTheme;
-  
+
   const HomeScreen({super.key, required this.onToggleTheme});
 
   @override
@@ -18,7 +18,6 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _scanAnimController;
-  bool _permissionsGranted = false;
 
   @override
   void initState() {
@@ -37,27 +36,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 
   Future<void> _requestPermissions() async {
-    final locationStatus = await Permission.locationWhenInUse.request();
-    setState(() {
-      _permissionsGranted = locationStatus.isGranted;
-    });
-    
-    if (_permissionsGranted) {
+    try {
+      await [
+        Permission.locationWhenInUse,
+        Permission.nearbyWifiDevices,
+      ].request();
+    } catch (_) {}
+    if (mounted) {
       ref.invalidate(wifiInfoProvider);
     }
   }
 
   void _startScan() {
-    if (!_permissionsGranted) {
-      _requestPermissions();
-      return;
-    }
     _scanAnimController.repeat();
-    ref.read(scannerProvider.notifier).startScan().then((_) {
-      _scanAnimController.stop();
-      _scanAnimController.reset();
-    });
     ref.invalidate(wifiInfoProvider);
+    ref.read(scannerProvider.notifier).startScan().then((_) {
+      if (mounted) {
+        _scanAnimController.stop();
+        _scanAnimController.reset();
+      }
+    });
   }
 
   void _stopScan() {
@@ -74,184 +72,192 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          // Gradient App Bar
-          SliverAppBar(
-            expandedHeight: 120,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              title: const Text(
-                'WiFi Scanner',
-                style: TextStyle(fontWeight: FontWeight.bold),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(wifiInfoProvider);
+          _startScan();
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            // App Bar
+            SliverAppBar(
+              expandedHeight: 110,
+              pinned: true,
+              flexibleSpace: FlexibleSpaceBar(
+                title: const Text(
+                  'Quét Mạng WiFi',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        colorScheme.primary,
+                        colorScheme.tertiary,
+                      ],
+                    ),
+                  ),
+                ),
               ),
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primary,
-                      colorScheme.tertiary,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh),
+                  onPressed: () {
+                    ref.invalidate(wifiInfoProvider);
+                    if (!scanState.isScanning) _startScan();
+                  },
+                  tooltip: 'Làm mới',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.brightness_6),
+                  onPressed: widget.onToggleTheme,
+                  tooltip: 'Chế độ Sáng / Tối',
+                ),
+              ],
+            ),
+
+            // WiFi Info Card
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: wifiInfoAsync.when(
+                  data: (wifiInfo) => WifiInfoCard(wifiInfo: wifiInfo),
+                  loading: () => const Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Center(child: CircularProgressIndicator()),
+                    ),
+                  ),
+                  error: (e, _) => Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text('Lỗi tải thông tin mạng: $e'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Scan Progress Bar
+            if (scanState.isScanning)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Đang quét... ${scanState.scannedCount}/${scanState.totalCount} IPs (${(scanState.progress * 100).toInt()}%)',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: colorScheme.secondaryContainer,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${scanState.devices.length} tìm thấy',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: colorScheme.onSecondaryContainer,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: LinearProgressIndicator(
+                          value: scanState.progress,
+                          minHeight: 6,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.brightness_6),
-                onPressed: widget.onToggleTheme,
-                tooltip: 'Toggle Theme',
-              ),
-            ],
-          ),
 
-          // WiFi Info Card
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: wifiInfoAsync.when(
-                data: (wifiInfo) => WifiInfoCard(wifiInfo: wifiInfo),
-                loading: () => const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: CircularProgressIndicator()),
-                  ),
-                ),
-                error: (e, _) => Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text('Error loading WiFi info: $e'),
+            // Discovered Header
+            if (!scanState.isScanning && scanState.devices.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+                  child: Row(
+                    children: [
+                      Icon(Icons.devices, size: 20, color: colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Đã tìm thấy ${scanState.devices.length} thiết bị',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ),
 
-          // Scan Progress
-          if (scanState.isScanning)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Scanning... ${scanState.scannedCount}/${scanState.totalCount}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.primary,
-                            fontWeight: FontWeight.w600,
+            // Device List
+            if (scanState.devices.isNotEmpty)
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final device = scanState.devices[index];
+                    return DeviceCard(
+                      device: device,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DeviceDetailScreen(device: device),
                           ),
-                        ),
-                        Text(
-                          '${scanState.devices.length} found',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.secondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: LinearProgressIndicator(
-                        value: scanState.progress,
-                        minHeight: 6,
-                        backgroundColor: colorScheme.surfaceContainerHighest,
-                      ),
-                    ),
-                  ],
+                        );
+                      },
+                    );
+                  },
+                  childCount: scanState.devices.length,
                 ),
               ),
-            ),
 
-          // Device Count Header
-          if (!scanState.isScanning && scanState.devices.isNotEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
-                child: Row(
-                  children: [
-                    Icon(Icons.devices, size: 20, color: colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${scanState.devices.length} Devices Found',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Device List
-          if (scanState.devices.isNotEmpty)
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final device = scanState.devices[index];
-                  return DeviceCard(
-                    device: device,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => DeviceDetailScreen(device: device),
-                        ),
-                      );
-                    },
-                  );
-                },
-                childCount: scanState.devices.length,
-              ),
-            ),
-
-          // Empty State
-          if (!scanState.isScanning && scanState.devices.isEmpty)
-            SliverFillRemaining(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.wifi_find,
-                      size: 80,
-                      color: colorScheme.outline.withOpacity(0.5),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Tap the scan button to\ndiscover devices',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: colorScheme.outline,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-          // Error State
-          if (scanState.error != null)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Card(
-                  color: colorScheme.errorContainer,
+            // Empty State
+            if (!scanState.isScanning && scanState.devices.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
                   child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.error, color: colorScheme.error),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            scanState.error!,
-                            style: TextStyle(color: colorScheme.onErrorContainer),
+                        Icon(
+                          Icons.radar,
+                          size: 72,
+                          color: colorScheme.primary.withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Sẵn sàng quét mọi mạng',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Hỗ trợ Wi-Fi 2.4GHz, 5GHz, 6GHz, Hotspot di động và mạng LAN nội bộ.\nBấm nút bên dưới để bắt đầu quét!',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.outline,
                           ),
                         ),
                       ],
@@ -259,13 +265,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                 ),
               ),
-            ),
 
-          // Bottom padding
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 80),
-          ),
-        ],
+            // Bottom padding for FAB
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 90),
+            ),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: scanState.isScanning ? _stopScan : _startScan,
@@ -275,7 +281,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 turns: _scanAnimController,
                 child: const Icon(Icons.radar),
               ),
-        label: Text(scanState.isScanning ? 'Stop' : 'Scan Network'),
+        label: Text(scanState.isScanning ? 'Dừng quét' : 'Quét Toàn Mạng'),
         backgroundColor: scanState.isScanning
             ? colorScheme.error
             : colorScheme.primaryContainer,
@@ -286,4 +292,3 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     );
   }
 }
-

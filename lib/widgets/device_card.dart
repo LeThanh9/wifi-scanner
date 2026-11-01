@@ -37,6 +37,8 @@ class DeviceCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final hasHostname = device.hostname != 'Unknown' && device.hostname.isNotEmpty;
+
     return Card(
       child: InkWell(
         onTap: onTap,
@@ -52,14 +54,18 @@ class DeviceCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: device.isGateway
                       ? colorScheme.primaryContainer
-                      : colorScheme.surfaceContainerHighest,
+                      : device.isCurrentDevice
+                          ? Colors.teal.withOpacity(0.2)
+                          : colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   _getDeviceIcon(),
                   color: device.isGateway
                       ? colorScheme.onPrimaryContainer
-                      : colorScheme.onSurface,
+                      : device.isCurrentDevice
+                          ? Colors.teal
+                          : colorScheme.onSurface,
                 ),
               ),
               const SizedBox(width: 12),
@@ -73,13 +79,15 @@ class DeviceCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            device.ipAddress,
+                            hasHostname ? device.hostname : device.ipAddress,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (device.isGateway)
+                        if (device.isGateway) ...[
+                          const SizedBox(width: 4),
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -90,28 +98,52 @@ class DeviceCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              'Gateway',
+                              'Router',
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: colorScheme.onPrimary,
                                 fontWeight: FontWeight.bold,
+                                fontSize: 10,
                               ),
                             ),
                           ),
+                        ] else if (device.isCurrentDevice) ...[
+                          const SizedBox(width: 4),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.teal,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'This Device',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      device.macAddress,
+                      hasHostname ? '${device.ipAddress} • ${device.macAddress}' : device.macAddress,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.outline,
                         fontFamily: 'monospace',
+                        fontSize: 11,
                       ),
                     ),
-                    if (device.vendor != 'Unknown')
+                    if (device.vendor != 'Unknown' && device.vendor != 'This Device')
                       Text(
                         device.vendor,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.secondary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                   ],
@@ -129,9 +161,9 @@ class DeviceCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: device.pingTimeMs < 10
+                        color: device.pingTimeMs < 20
                             ? Colors.green.withOpacity(0.15)
-                            : device.pingTimeMs < 50
+                            : device.pingTimeMs < 80
                                 ? Colors.orange.withOpacity(0.15)
                                 : Colors.red.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
@@ -140,9 +172,9 @@ class DeviceCard extends StatelessWidget {
                         '${device.pingTimeMs}ms',
                         style: theme.textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: device.pingTimeMs < 10
+                          color: device.pingTimeMs < 20
                               ? Colors.green
-                              : device.pingTimeMs < 50
+                              : device.pingTimeMs < 80
                                   ? Colors.orange
                                   : Colors.red,
                         ),
@@ -163,4 +195,3 @@ class DeviceCard extends StatelessWidget {
     );
   }
 }
-
